@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gather</title>
+<style>
+  :root{
+    --bg:#14111f; --card:#201b33; --card2:#2a2444; --text:#f4f1ff; --muted:#a9a0c9;
+    --accent:#ff5fa2; --accent2:#7c5cff; --ok:#3ddc97; --line:#362f57;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:#0b0914;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--text);display:flex;justify-content:center}
+  #phone{width:100%;max-width:420px;min-height:100vh;background:var(--bg);position:relative}
+  .topbar{position:sticky;top:0;z-index:5;background:rgba(20,17,31,.92);backdrop-filter:blur(8px);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+  .logo{font-weight:800;font-size:22px;letter-spacing:-.5px;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .back{background:none;border:none;color:var(--text);font-size:15px;cursor:pointer;padding:4px 0}
+  .pad{padding:16px 18px 40px}
+  h2{font-size:20px;margin-bottom:4px}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:16px;line-height:1.4}
+  .card{background:var(--card);border-radius:18px;overflow:hidden;margin-bottom:16px;cursor:pointer;border:1px solid var(--line);position:relative}
+  .banner{height:130px;display:flex;align-items:center;justify-content:center;font-size:58px}
+  .cbody{padding:12px 14px 14px}
+  .ctitle{font-weight:700;font-size:17px;margin-bottom:4px}
+  .cmeta{color:var(--muted);font-size:13px;line-height:1.5}
+  .badge{position:absolute;top:10px;right:10px;background:var(--ok);color:#06231a;font-weight:700;font-size:12px;padding:4px 9px;border-radius:99px}
+  .btn{display:block;width:100%;border:none;border-radius:14px;padding:14px;font-size:16px;font-weight:700;color:#fff;background:linear-gradient(90deg,var(--accent),var(--accent2));cursor:pointer;margin-top:10px}
+  .btn[disabled]{opacity:.35;cursor:not-allowed}
+  .btn.ghost{background:var(--card2);color:var(--text)}
+  .dbanner{height:190px;display:flex;align-items:center;justify-content:center;font-size:84px}
+  .dtitle{font-size:24px;font-weight:800;margin:14px 0 6px}
+  .row{display:flex;gap:10px;align-items:flex-start;margin:8px 0;font-size:15px;line-height:1.4}
+  .row .ic{width:22px;text-align:center}
+  .desc{margin:14px 0;font-size:15px;line-height:1.55;color:#e4defa}
+  .guests{display:flex;align-items:center;gap:8px;margin:10px 0 4px;font-size:14px;color:var(--muted)}
+  .av{display:flex}.av span{width:28px;height:28px;border-radius:50%;border:2px solid var(--bg);margin-left:-8px;display:flex;align-items:center;justify-content:center;font-size:14px}
+  .av span:first-child{margin-left:0}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:16px}
+  .q{font-size:15px;font-weight:600;margin-bottom:10px;line-height:1.35}
+  .scale{display:flex;gap:6px}
+  .scale button{flex:1;aspect-ratio:1;max-height:42px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--text);font-size:15px;font-weight:600;cursor:pointer}
+  .scale button.on{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent}
+  .anch{display:flex;justify-content:space-between;color:var(--muted);font-size:11.5px;margin-top:5px}
+  .item{padding:12px 0;border-top:1px solid var(--line)}
+  .item:first-of-type{border-top:none}
+  .item .lab{font-size:15px;margin-bottom:8px;font-weight:600}
+  .rank{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:10px;cursor:pointer}
+  .rank .em{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px}
+  .rank .t{flex:1;font-weight:600;font-size:15px}
+  .rank .n{width:30px;height:30px;border-radius:50%;border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;font-weight:800}
+  .rank.set{border-color:var(--accent)}
+  .rank.set .n{border:none;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+  pre{background:#0b0914;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:11px;white-space:pre-wrap;word-break:break-all;max-height:240px;overflow:auto;color:#cfc8ee}
+  .center{text-align:center;padding-top:60px}
+  .center .big{font-size:60px;margin-bottom:10px}
+</style>
+</head>
+<body>
+<div id="phone"><div id="app"></div></div>
+
+<script>
+/* ============================================================
+   CONFIG — edit here
+   ============================================================ */
+const CONFIG = {
+  appName: "Gather",
+  requireAllRated: true,       // must rate all events before ranking
+  scaleMax: 7,
+  attendAfterAffect: true,     // attend questions appear only after all predicted-affect items are answered
+  predictedIntro: "If you attended this event, how much do you think you'll feel each of the following?",
+  predictedAnchors: ["Not at all", "Extremely"],
+  rankIntro: "Tap the events in order, starting with the one you would most want to attend.",
+  sendToParent: true,          // postMessage to parent window (for Qualtrics iframe)
+  costMode: "matched"          // "matched" = price shown, equal within each pair | "free" = all events free
+};
+function costText(e){ return (CONFIG.costMode==="free" || !e.cost) ? "Free" : "$"+e.cost+" per person"; }
+
+/* Matched pairs: same category, day/time, cost, and host/going counts; differ in arousal. */
+const EVENTS = [
+  {id:"A_HAP", pair:"A", cond:"HAP", emoji:"🎢", grad:"linear-gradient(135deg,#ff7a59,#ff3d81)",
+   title:"Amusement Park Takeover", when:"Saturday · 11:00 AM", where:"Riverside Adventure Park", host:"Maya", going:14, maybe:4, cost:25,
+   desc:"We're taking over the park for the day! Roller coasters, the giant drop tower, and bumper cars. Come ready to ride everything. We'll go in groups and meet for lunch at 1."},
+  {id:"A_LAP", pair:"A", cond:"LAP", emoji:"🌿", grad:"linear-gradient(135deg,#4fd1a5,#2a9d8f)",
+   title:"Botanical Garden Stroll", when:"Saturday · 11:00 AM", where:"Riverside Botanical Garden", host:"Maya", going:12, maybe:5, cost:25,
+   desc:"We're spending the day wandering the garden. Shaded paths, the lily pond, and the greenhouse. Come take it slow. We'll walk in small groups and meet for lunch at 1."},
+  {id:"B_HAP", pair:"B", cond:"HAP", emoji:"🪩", grad:"linear-gradient(135deg,#a855f7,#ec4899)",
+   title:"Warehouse Dance Party", when:"Friday · 9:00 PM", where:"The Foundry", host:"Jordan", going:11, maybe:3, cost:15,
+   desc:"A DJ on the decks, bright lights, and a packed dance floor. Come dance until late. It's a big crowd and the music is loud."},
+  {id:"B_LAP", pair:"B", cond:"LAP", emoji:"🎻", grad:"linear-gradient(135deg,#8b7cf6,#5b6cff)",
+   title:"Acoustic Listening Lounge", when:"Friday · 9:00 PM", where:"The Foundry", host:"Jordan", going:13, maybe:4, cost:15,
+   desc:"A local trio playing acoustic sets in a candlelit room. Come sit back and listen. It's a small crowd and the music is soft."},
+  {id:"C_HAP", pair:"C", cond:"HAP", emoji:"🎤", grad:"linear-gradient(135deg,#ffb020,#ff5f6d)",
+   title:"Karaoke Showdown", when:"Thursday · 8:00 PM", where:"Elm Street Loft", host:"Sam", going:13, maybe:5, cost:10,
+   desc:"A huge song list and friendly competition. Sing, cheer, and take over the mic. We'll have teams, prizes, and a lot of energy in the room."},
+  {id:"C_LAP", pair:"C", cond:"LAP", emoji:"🍵", grad:"linear-gradient(135deg,#7fd1c7,#6fa8dc)",
+   title:"Board Games & Tea Night", when:"Thursday · 8:00 PM", where:"Elm Street Loft", host:"Sam", going:13, maybe:3, cost:10,
+   desc:"A shelf of board games and a pot of tea. Play, chat, and unwind. We'll have small tables, a slow pace, and plenty of snacks."}
+];
+
+/* Attendance questions (shown after predicted affect) */
+const ATTEND_QS = [
+  {k:"motivation", q:"How motivated are you to attend this event?", anchors:["Not at all motivated","Extremely motivated"]},
+  {k:"likelihood", q:"How likely are you to attend this event?",    anchors:["Not at all likely","Extremely likely"]}
+];
+
+/* Predicted-affect items (type = scoring subscale): HAP, LAP, NEU (neutral), NEG (negative) */
+const AFFECT_ITEMS = [
+  {k:"excited", type:"HAP"}, {k:"enthusiastic", type:"HAP"},
+  {k:"calm", type:"LAP"}, {k:"relaxed", type:"LAP"},
+  {k:"neutral", type:"NEU"}, {k:"indifferent", type:"NEU"},
+  {k:"anxious", type:"NEG"}, {k:"bored", type:"NEG"}
+];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+const feedOrder = shuffle(EVENTS.map(e=>e.id));
+const itemOrder = shuffle(AFFECT_ITEMS.map(i=>i.k));   // fixed within participant
+const S = {screen:"feed", current:null, openAt:0, ranking:[], startedAt:Date.now(), data:{}, submitted:false};
+EVENTS.forEach(e=>{S.data[e.id]={motivation:null, likelihood:null, pred:{}, views:0, dwell:0, firstOpenMs:null, savedMs:null}});
+const byId = id=>EVENTS.find(e=>e.id===id);
+const app = document.getElementById("app");
+
+function affectDone(id){
+  const d=S.data[id];
+  return AFFECT_ITEMS.every(i=>d.pred[i.k]!==undefined);
+}
+function isComplete(id){
+  const d=S.data[id];
+  return affectDone(id) && ATTEND_QS.every(a=>d[a.k]!==null);
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function scaleHTML(selected, onclickFn, anchors){
+  let b=""; for(let v=1; v<=CONFIG.scaleMax; v++){
+    b+=`<button class="${selected===v?'on':''}" onclick="${onclickFn}(${v})">${v}</button>`;
+  }
+  return `<div class="scale">${b}</div><div class="anch"><span>${anchors[0]}</span><span>${anchors[1]}</span></div>`;
+}
+
+function renderFeed(){
+  const done = EVENTS.filter(e=>isComplete(e.id)).length;
+  const allDone = done===EVENTS.length;
+  let cards = feedOrder.map(id=>{
+    const e=byId(id), ok=isComplete(id);
+    return `<div class="card" onclick="openEvent('${id}')">
+      ${ok?'<div class="badge">✓ Rated</div>':''}
+      <div class="banner" style="background:${e.grad}">${e.emoji}</div>
+      <div class="cbody"><div class="ctitle">${e.title}</div>
+        <div class="cmeta">📅 ${e.when}<br>📍 ${e.where}<br>👥 ${e.going} going · ${e.maybe} maybe · ${costText(e)}</div></div></div>`;
+  }).join("");
+  const canGo = CONFIG.requireAllRated ? allDone : done>0;
+  app.innerHTML = `
+    <div class="topbar"><div class="logo">${CONFIG.appName}</div><div style="font-size:13px;color:var(--muted)">${done}/${EVENTS.length} rated</div></div>
+    <div class="pad">
+      <h2>Upcoming near you</h2>
+      <div class="sub">Imagine these events were posted by friends and appeared in your feed. Tap each one to see the details and answer a few questions.</div>
+      ${cards}
+      <button class="btn" ${canGo?'':'disabled'} onclick="goRank()">Continue</button>
+    </div>`;
+  window.scrollTo(0,0);
+}
+
+function renderEvent(id){
+  const e=byId(id), d=S.data[id];
+  const items = itemOrder.map(k=>{
+    const sel = d.pred[k];
+    return `<div class="item"><div class="lab">${k.charAt(0).toUpperCase()+k.slice(1)}</div>${scaleHTML(sel,`setPred.bind(null,'${k}')`,CONFIG.predictedAnchors)}</div>`;
+  }).join("");
+  app.innerHTML = `
+    <div class="topbar"><button class="back" onclick="closeEvent()">‹ Back</button><div class="logo">${CONFIG.appName}</div><div style="width:44px"></div></div>
+    <div class="dbanner" style="background:${e.grad}">${e.emoji}</div>
+    <div class="pad">
+      <div class="dtitle">${e.title}</div>
+      <div class="row"><span class="ic">📅</span><span>${e.when}</span></div>
+      <div class="row"><span class="ic">📍</span><span>${e.where}</span></div>
+      <div class="row"><span class="ic">🧑</span><span>Hosted by ${e.host}</span></div>
+      <div class="row"><span class="ic">💸</span><span>${costText(e)}</span></div>
+      <div class="guests"><div class="av"><span style="background:#ff7aa8">🙂</span><span style="background:#7aa8ff">😄</span><span style="background:#7affc4">😊</span><span style="background:#ffd27a">😎</span></div>${e.going} going · ${e.maybe} maybe</div>
+      <div class="desc">${e.desc}</div>
+
+      <div class="panel"><div class="q">${CONFIG.predictedIntro}</div>${items}</div>
+
+      ${(!CONFIG.attendAfterAffect || affectDone(id)) ? ATTEND_QS.map(a=>
+        `<div class="panel"><div class="q">${a.q}</div>${scaleHTML(d[a.k],`setAttend.bind(null,'${a.k}')`,a.anchors)}</div>`
+      ).join("") : `<div class="sub" style="margin-top:14px">Answer every item above to continue.</div>`}
+
+      <button class="btn" id="saveBtn" ${isComplete(id)?'':'disabled'} onclick="closeEvent()">Save &amp; back to feed</button>
+    </div>`;
+  window.scrollTo(0,0);
+}
+
+function renderRank(){
+  const n=S.ranking.length;
+  const list = feedOrder.map(id=>{
+    const e=byId(id), pos=S.ranking.indexOf(id);
+    return `<div class="rank ${pos>=0?'set':''}" onclick="toggleRank('${id}')">
+      <div class="em" style="background:${e.grad}">${e.emoji}</div>
+      <div class="t">${e.title}</div>
+      <div class="n">${pos>=0?pos+1:''}</div></div>`;
+  }).join("");
+  app.innerHTML = `
+    <div class="topbar"><button class="back" onclick="S.screen='feed';render()">‹ Back</button><div class="logo">${CONFIG.appName}</div><div style="width:44px"></div></div>
+    <div class="pad">
+      <h2>Which would you choose?</h2>
+      <div class="sub">${CONFIG.rankIntro} (1 = most want to attend)</div>
+      ${list}
+      <button class="btn ghost" onclick="S.ranking=[];render()">Reset ranking</button>
+      <button class="btn" ${n===EVENTS.length?'':'disabled'} onclick="submit()">Submit</button>
+    </div>`;
+  window.scrollTo(0,0);
+}
+
+function renderDone(payload){
+  const standalone = (window.parent===window);
+  const debug = /[?&]debug=1/.test(location.search);
+  app.innerHTML = `
+    <div class="topbar"><div class="logo">${CONFIG.appName}</div></div>
+    <div class="pad center"><div class="big">🎉</div><h2>All done!</h2>
+      <div class="sub">Your responses have been recorded.</div>
+      ${(standalone||debug)?`<div style="text-align:left"><div class="sub">Pilot mode: data payload</div><button class="btn ghost" onclick="downloadCSV()">Download data (CSV)</button><pre>${JSON.stringify(payload.flat,null,2)}</pre></div>`:''}
+    </div>`;
+}
+
+function render(){ ({feed:renderFeed, rank:renderRank})[S.screen]?.(); if(S.screen==="event") renderEvent(S.current); }
+
+/* ============================================================
+   ACTIONS
+   ============================================================ */
+function openEvent(id){
+  S.current=id; S.screen="event"; S.openAt=Date.now();
+  const d=S.data[id]; d.views++;
+  if(d.firstOpenMs===null) d.firstOpenMs=Date.now()-S.startedAt;
+  render();
+}
+function closeEvent(){
+  const d=S.data[S.current]; d.dwell+=Date.now()-S.openAt;
+  if(isComplete(S.current)) d.savedMs=Date.now()-S.startedAt;
+  S.screen="feed"; S.current=null; render();
+}
+function setAttend(k,v){ S.data[S.current][k]=v; refreshEvent(); }
+function setPred(k,v){ S.data[S.current].pred[k]=v; refreshEvent(); }
+function refreshEvent(){ const y=window.scrollY; renderEvent(S.current); window.scrollTo(0,y); }
+function goRank(){ S.screen="rank"; render(); }
+function toggleRank(id){
+  const i=S.ranking.indexOf(id);
+  if(i>=0) S.ranking.splice(i); else S.ranking.push(id);   // un-tapping removes it and everything after
+  renderRank();
+}
+
+function mean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+
+function buildPayload(){
+  const flat={}, nested={};
+  EVENTS.forEach(e=>{
+    const d=S.data[e.id];
+    const sub=t=>+mean(AFFECT_ITEMS.filter(i=>i.type===t).map(i=>d.pred[i.k])).toFixed(3);
+    const row={
+      motivation:d.motivation, likelihood:d.likelihood,
+      pred_hap:sub("HAP"), pred_lap:sub("LAP"), pred_neu:sub("NEU"), pred_neg:sub("NEG"),
+      rank:S.ranking.indexOf(e.id)+1,
+      shown_going:e.going, shown_maybe:e.maybe, shown_cost:(CONFIG.costMode==="free"?0:e.cost),
+      views:d.views, dwell_ms:d.dwell, first_open_ms:d.firstOpenMs, saved_ms:d.savedMs
+    };
+    AFFECT_ITEMS.forEach(i=>row["p_"+i.k]=d.pred[i.k]);
+    nested[e.id]=row;
+    Object.keys(row).forEach(k=>flat[`${e.id}_${k}`]=row[k]);
+  });
+  flat.feed_order = feedOrder.join(",");
+  flat.item_order = itemOrder.join(",");
+  flat.rank_order = S.ranking.join(",");
+  flat.cost_mode = CONFIG.costMode;
+  flat.total_ms = Date.now()-S.startedAt;
+  return {flat, nested};
+}
+
+function submit(){
+  if(S.submitted) return; S.submitted=true;
+  const payload=buildPayload(); S.payload=payload;
+  if(CONFIG.sendToParent){
+    try{ window.parent.postMessage({type:"gather_data", flat:payload.flat, payload:payload.nested},"*"); }catch(e){}
+  }
+  try{   // works if this code is pasted directly into a Qualtrics question
+    if(window.Qualtrics && Qualtrics.SurveyEngine){
+      Object.keys(payload.flat).forEach(k=>Qualtrics.SurveyEngine.setJSEmbeddedData(k,String(payload.flat[k])));
+    }
+  }catch(e){}
+  renderDone(payload);
+}
+
+/* Pilot mode only: save one row of data as a CSV */
+function downloadCSV(){
+  const f=S.payload.flat, keys=Object.keys(f);
+  const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
+  const csv=keys.map(q).join(",")+"\n"+keys.map(k=>q(f[k])).join(",");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download="gather_pilot_data.csv"; a.click();
+}
+
+render();
+</script>
+</body>
+</html>
