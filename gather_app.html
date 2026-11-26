@@ -75,6 +75,8 @@ const CONFIG = {
   predictedAnchors: ["Not at all", "Extremely"],
   rankIntro: "Tap the events in order, starting with the one you would most want to attend.",
   sendToParent: true,          // postMessage to parent window (for Qualtrics iframe)
+  ackWaitMs: 1500,             // when embedded: resend data every this many ms until Qualtrics confirms it saved
+  ackTries: 6,                 // after this many unconfirmed tries, show the "could not save" screen
   costMode: "matched"          // "matched" = price shown, equal within each pair | "free" = all events free
 };
 function costText(e){ return (CONFIG.costMode==="free" || !e.cost) ? "Free" : "$"+e.cost+" per person"; }
@@ -295,15 +297,41 @@ function buildPayload(){
 function submit(){
   if(S.submitted) return; S.submitted=true;
   const payload=buildPayload(); S.payload=payload;
-  if(CONFIG.sendToParent){
-    try{ window.parent.postMessage({type:"gather_data", flat:payload.flat, payload:payload.nested},"*"); }catch(e){}
-  }
   try{   // works if this code is pasted directly into a Qualtrics question
     if(window.Qualtrics && Qualtrics.SurveyEngine){
       Object.keys(payload.flat).forEach(k=>Qualtrics.SurveyEngine.setJSEmbeddedData(k,String(payload.flat[k])));
     }
   }catch(e){}
-  renderDone(payload);
+  if(EMBED && CONFIG.sendToParent){ renderSaving(); waitForAck(); }   // embedded: only finish once Qualtrics confirms the save
+  else renderDone(payload);                                          // standalone / pilot mode
+}
+
+/* ---- Embedded save handshake: send until Qualtrics replies "gather_ack" ---- */
+function sendData(){
+  const p=S.payload;
+  try{ window.parent.postMessage({type:"gather_data", flat:p.flat, payload:p.nested},"*"); }catch(e){}
+}
+function waitForAck(){
+  let tries=0; clearInterval(S.timer); sendData();
+  S.timer=setInterval(()=>{
+    if(S.acked){ clearInterval(S.timer); return; }
+    if(++tries>=CONFIG.ackTries){ clearInterval(S.timer); renderSaveFailed(); } else sendData();
+  }, CONFIG.ackWaitMs);
+}
+window.addEventListener("message", ev=>{
+  if(ev.data && ev.data.type==="gather_ack" && !S.acked){ S.acked=true; clearInterval(S.timer); renderDone(S.payload); }
+});
+function retrySave(){ renderSaving(); waitForAck(); }
+function renderSaving(){
+  app.innerHTML=`<div class="topbar"><div class="logo">${CONFIG.appName}</div></div>
+    <div class="pad center"><div class="big">⏳</div><h2>Saving your responses…</h2><div class="sub">Please wait a moment.</div></div>`;
+}
+function renderSaveFailed(){
+  app.innerHTML=`<div class="topbar"><div class="logo">${CONFIG.appName}</div></div>
+    <div class="pad"><h2>We couldn't save your responses</h2>
+      <div class="sub">Your answers were not recorded automatically. Please try again, and if this keeps happening, tell the researcher.</div>
+      <button class="btn" onclick="retrySave()">Try again</button>
+      <button class="btn ghost" onclick="downloadCSV()">Download my data (CSV)</button></div>`;
 }
 
 /* Pilot mode only: save one row of data as a CSV */
