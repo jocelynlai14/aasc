@@ -83,22 +83,22 @@ function costText(e){ return (CONFIG.costMode==="free" || !e.cost) ? "Free" : "$
 
 /* Matched pairs: same category, day/time, cost, and host/going counts; differ in arousal. */
 const EVENTS = [
-  {id:"A_HAP", pair:"A", cond:"HAP", emoji:"🎢", grad:"linear-gradient(135deg,#ff7a59,#ff3d81)",
+  {id:"outdoors_HAP", pair:"outdoors", cond:"HAP", emoji:"🎢", grad:"linear-gradient(135deg,#ff7a59,#ff3d81)",
    title:"Amusement Park Takeover", when:"Saturday · 11:00 AM", where:"Riverside Adventure Park", host:"Maya", going:14, maybe:4, cost:25,
    desc:"We're taking over the park for the day! Roller coasters, the giant drop tower, and bumper cars. Come ready to ride everything. We'll go in groups and meet for lunch at 1."},
-  {id:"A_LAP", pair:"A", cond:"LAP", emoji:"🌿", grad:"linear-gradient(135deg,#4fd1a5,#2a9d8f)",
+  {id:"outdoors_LAP", pair:"outdoors", cond:"LAP", emoji:"🌿", grad:"linear-gradient(135deg,#4fd1a5,#2a9d8f)",
    title:"Botanical Garden Stroll", when:"Saturday · 11:00 AM", where:"Riverside Botanical Garden", host:"Maya", going:12, maybe:5, cost:25,
    desc:"We're spending the day wandering the garden. Shaded paths, the lily pond, and the greenhouse. Come take it slow. We'll walk in small groups and meet for lunch at 1."},
-  {id:"B_HAP", pair:"B", cond:"HAP", emoji:"🪩", grad:"linear-gradient(135deg,#a855f7,#ec4899)",
+  {id:"music_HAP", pair:"music", cond:"HAP", emoji:"🪩", grad:"linear-gradient(135deg,#a855f7,#ec4899)",
    title:"Warehouse Dance Party", when:"Friday · 9:00 PM", where:"The Foundry", host:"Jordan", going:11, maybe:3, cost:15,
    desc:"A DJ on the decks, bright lights, and a packed dance floor. Come dance until late. It's a big crowd and the music is loud."},
-  {id:"B_LAP", pair:"B", cond:"LAP", emoji:"🎻", grad:"linear-gradient(135deg,#8b7cf6,#5b6cff)",
+  {id:"music_LAP", pair:"music", cond:"LAP", emoji:"🎻", grad:"linear-gradient(135deg,#8b7cf6,#5b6cff)",
    title:"Acoustic Listening Lounge", when:"Friday · 9:00 PM", where:"The Foundry", host:"Jordan", going:13, maybe:4, cost:15,
    desc:"A local trio playing acoustic sets in a candlelit room. Come sit back and listen. It's a small crowd and the music is soft."},
-  {id:"C_HAP", pair:"C", cond:"HAP", emoji:"🎤", grad:"linear-gradient(135deg,#ffb020,#ff5f6d)",
+  {id:"hangout_HAP", pair:"hangout", cond:"HAP", emoji:"🎤", grad:"linear-gradient(135deg,#ffb020,#ff5f6d)",
    title:"Karaoke Showdown", when:"Thursday · 8:00 PM", where:"Elm Street Loft", host:"Sam", going:13, maybe:5, cost:10,
    desc:"A huge song list and friendly competition. Sing, cheer, and take over the mic. We'll have teams, prizes, and a lot of energy in the room."},
-  {id:"C_LAP", pair:"C", cond:"LAP", emoji:"🍵", grad:"linear-gradient(135deg,#7fd1c7,#6fa8dc)",
+  {id:"hangout_LAP", pair:"hangout", cond:"LAP", emoji:"🍵", grad:"linear-gradient(135deg,#7fd1c7,#6fa8dc)",
    title:"Board Games & Tea Night", when:"Thursday · 8:00 PM", where:"Elm Street Loft", host:"Sam", going:13, maybe:3, cost:10,
    desc:"A shelf of board games and a pot of tea. Play, chat, and unwind. We'll have small tables, a slow pace, and plenty of snacks."}
 ];
@@ -232,8 +232,8 @@ function renderDone(payload){
   const debug = /[?&]debug=1/.test(location.search);
   app.innerHTML = `
     <div class="topbar"><div class="logo">${CONFIG.appName}</div></div>
-    <div class="pad center"><div class="big">🎉</div><h2>All done!</h2>
-      <div class="sub">Your responses have been recorded.</div>
+    <div class="pad center"><div class="big">🎉</div><h2>${EMBED?'Thanks!':'All done!'}</h2>
+      <div class="sub">${EMBED?'Please click <b>Next</b> below to continue.':'This is a preview, so nothing was saved. Download your data below.'}</div>
       ${(standalone||debug)?`<div style="text-align:left"><div class="sub">Pilot mode: data payload</div><button class="btn ghost" onclick="downloadCSV()">Download data (CSV)</button><pre>${JSON.stringify(payload.flat,null,2)}</pre></div>`:''}
     </div>`;
 }
@@ -276,7 +276,7 @@ function buildPayload(){
     const d=S.data[e.id];
     const sub=t=>+mean(AFFECT_ITEMS.filter(i=>i.type===t).map(i=>d.pred[i.k])).toFixed(3);
     const row={
-      motivation:d.motivation, likelihood:d.likelihood,
+      title:e.title, motivation:d.motivation, likelihood:d.likelihood,
       pred_hap:sub("HAP"), pred_lap:sub("LAP"), pred_neu:sub("NEU"), pred_neg:sub("NEG"),
       rank:S.ranking.indexOf(e.id)+1,
       shown_going:e.going, shown_maybe:e.maybe, shown_cost:(CONFIG.costMode==="free"?0:e.cost),
