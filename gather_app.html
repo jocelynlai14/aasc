@@ -53,6 +53,10 @@
   pre{background:#0b0914;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:11px;white-space:pre-wrap;word-break:break-all;max-height:240px;overflow:auto;color:#cfc8ee}
   .center{text-align:center;padding-top:60px}
   .center .big{font-size:60px;margin-bottom:10px}
+  /* When embedded in Qualtrics (iframe): no sticky header, no black surround, no inner scroll */
+  body.embed{background:var(--bg);overflow:hidden}
+  body.embed #phone{min-height:0}
+  body.embed .topbar{position:static;backdrop-filter:none}
 </style>
 </head>
 <body>
@@ -122,6 +126,15 @@ EVENTS.forEach(e=>{S.data[e.id]={motivation:null, likelihood:null, pred:{}, view
 const byId = id=>EVENTS.find(e=>e.id===id);
 const app = document.getElementById("app");
 
+/* Embedded mode: tell the Qualtrics page how tall we are so the iframe can resize (no inner scrolling) */
+const EMBED = (window.parent !== window);
+if(EMBED) document.body.classList.add("embed");
+function notifyParent(scrollTop){
+  if(!EMBED || !CONFIG.sendToParent) return;
+  try{ window.parent.postMessage({type:"gather_layout", height:document.body.offsetHeight, scrollTop:!!scrollTop},"*"); }catch(e){}
+}
+if(EMBED && window.ResizeObserver){ new ResizeObserver(()=>notifyParent(false)).observe(document.body); }
+
 function affectDone(id){
   const d=S.data[id];
   return AFFECT_ITEMS.every(i=>d.pred[i.k]!==undefined);
@@ -161,7 +174,6 @@ function renderFeed(){
       ${cards}
       <button class="btn" ${canGo?'':'disabled'} onclick="goRank()">Continue</button>
     </div>`;
-  window.scrollTo(0,0);
 }
 
 function renderEvent(id){
@@ -190,7 +202,6 @@ function renderEvent(id){
 
       <button class="btn" id="saveBtn" ${isComplete(id)?'':'disabled'} onclick="closeEvent()">Save &amp; back to feed</button>
     </div>`;
-  window.scrollTo(0,0);
 }
 
 function renderRank(){
@@ -208,13 +219,13 @@ function renderRank(){
       <h2>Which would you choose?</h2>
       <div class="sub">${CONFIG.rankIntro} (1 = most want to attend)</div>
       ${list}
-      <button class="btn ghost" onclick="S.ranking=[];render()">Reset ranking</button>
+      <button class="btn ghost" onclick="S.ranking=[];renderRank()">Reset ranking</button>
       <button class="btn" ${n===EVENTS.length?'':'disabled'} onclick="submit()">Submit</button>
     </div>`;
-  window.scrollTo(0,0);
 }
 
 function renderDone(payload){
+  window.scrollTo(0,0); notifyParent(true);
   const standalone = (window.parent===window);
   const debug = /[?&]debug=1/.test(location.search);
   app.innerHTML = `
@@ -225,7 +236,11 @@ function renderDone(payload){
     </div>`;
 }
 
-function render(){ ({feed:renderFeed, rank:renderRank})[S.screen]?.(); if(S.screen==="event") renderEvent(S.current); }
+function render(){
+  ({feed:renderFeed, rank:renderRank})[S.screen]?.();
+  if(S.screen==="event") renderEvent(S.current);
+  window.scrollTo(0,0); notifyParent(true);   // new screen: scroll to its top (and ask Qualtrics to scroll the iframe into view)
+}
 
 /* ============================================================
    ACTIONS
@@ -243,7 +258,7 @@ function closeEvent(){
 }
 function setAttend(k,v){ S.data[S.current][k]=v; refreshEvent(); }
 function setPred(k,v){ S.data[S.current].pred[k]=v; refreshEvent(); }
-function refreshEvent(){ const y=window.scrollY; renderEvent(S.current); window.scrollTo(0,y); }
+function refreshEvent(){ renderEvent(S.current); }   // re-render in place; scroll position is kept
 function goRank(){ S.screen="rank"; render(); }
 function toggleRank(id){
   const i=S.ranking.indexOf(id);
