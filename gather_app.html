@@ -131,9 +131,11 @@ const app = document.getElementById("app");
 /* Embedded mode: tell the Qualtrics page how tall we are so the iframe can resize (no inner scrolling) */
 const EMBED = (window.parent !== window);
 if(EMBED) document.body.classList.add("embed");
-function notifyParent(scrollTop){
+function notifyParent(scrollTop, scrollToY){
   if(!EMBED || !CONFIG.sendToParent) return;
-  try{ window.parent.postMessage({type:"gather_layout", height:document.body.offsetHeight, scrollTop:!!scrollTop},"*"); }catch(e){}
+  const msg={type:"gather_layout", height:document.body.offsetHeight, scrollTop:!!scrollTop};
+  if(typeof scrollToY==="number") msg.scrollToY=scrollToY;   // y position (inside the app) to bring into view
+  try{ window.parent.postMessage(msg,"*"); }catch(e){}
 }
 if(EMBED && window.ResizeObserver){ new ResizeObserver(()=>notifyParent(false)).observe(document.body); }
 
@@ -161,7 +163,7 @@ function renderFeed(){
   const allDone = done===EVENTS.length;
   let cards = feedOrder.map(id=>{
     const e=byId(id), ok=isComplete(id);
-    return `<div class="card" onclick="openEvent('${id}')">
+    return `<div class="card" id="card-${id}" onclick="openEvent('${id}')">
       ${ok?'<div class="badge">✓ Rated</div>':''}
       <div class="banner" style="background:${e.grad}">${e.emoji}</div>
       <div class="cbody"><div class="ctitle">${e.title}</div>
@@ -238,10 +240,17 @@ function renderDone(payload){
     </div>`;
 }
 
-function render(){
+function render(opts){
   ({feed:renderFeed, rank:renderRank})[S.screen]?.();
   if(S.screen==="event") renderEvent(S.current);
-  window.scrollTo(0,0); notifyParent(true);   // new screen: scroll to its top (and ask Qualtrics to scroll the iframe into view)
+  // Returning to the feed after rating an event: stay at that event's card instead of jumping to the top
+  const card = opts && opts.focusId ? document.getElementById("card-"+opts.focusId) : null;
+  if(card){
+    const y = Math.max(0, Math.round(card.getBoundingClientRect().top + (window.scrollY||0) - 70));
+    window.scrollTo(0,y); notifyParent(false, y);
+  } else {
+    window.scrollTo(0,0); notifyParent(true);   // any other new screen: scroll to its top (and ask Qualtrics to bring the iframe into view)
+  }
 }
 
 /* ============================================================
@@ -256,7 +265,8 @@ function openEvent(id){
 function closeEvent(){
   const d=S.data[S.current]; d.dwell+=Date.now()-S.openAt;
   if(isComplete(S.current)) d.savedMs=Date.now()-S.startedAt;
-  S.screen="feed"; S.current=null; render();
+  const justRated=S.current;
+  S.screen="feed"; S.current=null; render({focusId:justRated});
 }
 function setAttend(k,v){ S.data[S.current][k]=v; refreshEvent(); }
 function setPred(k,v){ S.data[S.current].pred[k]=v; refreshEvent(); }
